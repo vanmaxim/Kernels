@@ -16,9 +16,13 @@ void TiledMatrixMulKernel(float *M, float *N, float *P, int Width)
   int Col = bx * TILE_WIDTH + tx;
 
   float Pvalue = 0;
-  for (int ph = 0; ph < Width/TILE_WIDTH; ++ph) {
-    Mds[ty][tx] = M[Row * Width + ph * TILE_WIDTH + tx];
-    Nds[ty][tx] = N[(ph * TILE_WIDTH + ty) * Width + Col];
+  for (int ph = 0; ph < ceil(Width/(float)TILE_WIDTH); ++ph) {
+    if ((Row < Width) && (ph * TILE_WIDTH + tx) < Width)
+      Mds[ty][tx] = M[Row * Width + ph * TILE_WIDTH + tx];
+    
+    if ((ph * TILE_WIDTH + ty) < Width && Col < Width)
+      Nds[ty][tx] = N[(ph * TILE_WIDTH + ty) * Width + Col];
+
     __syncthreads();
   
     for (int k = 0; k < TILE_WIDTH; ++k) {
@@ -27,7 +31,8 @@ void TiledMatrixMulKernel(float *M, float *N, float *P, int Width)
    __syncthreads();
   }
 
-  P[Row * Width + Col] = Pvalue;
+  if ((Row < Width) && (Col < Width))
+    P[Row * Width + Col] = Pvalue;
 }
 
 __global__
